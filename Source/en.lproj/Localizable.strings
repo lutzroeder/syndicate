@@ -1,0 +1,26 @@
+
+"OK" = "OK";
+"Cancel" = "Cancel";
+"Back" = "Back";
+
+"Open in Safari" = "Open in Safari";
+"Share via Email" = "Share via Email";
+"Show Original" = "Show Original";
+
+"Fwd: %@" = "Fwd: %@";
+
+"Accounts" = "Accounts";
+"Sign Out" = "Sign Out";
+
+"Twitter reported an unknown error." = "Twitter reported an unknown error.";
+"Twitter is over capacity." = "Twitter is over capacity.";
+
+"Authentication failure." = "Authentication failure.";
+
+"\"%@\" to %@." = "\"%@\" to %@.";
+
+"Pull down to update..." = "Pull down to update...";
+"Release to update..." = "Release to update...";
+"Updating %@..." = "Updating %@...";
+"Last updated: %@" = "Last updated: %@";
+"never" = "never";

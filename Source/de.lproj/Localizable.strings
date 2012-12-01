@@ -1,0 +1,26 @@
+
+"OK" = "OK";
+"Cancel" = "Abbrechen";
+"Back" = "Zurück";
+
+"Open in Safari" = "In Safari öffnen";
+"Share via Email" = "Als Email verschicken";
+"Show Original" = "Original anzeigen";
+
+"Fwd: %@" = "Fwd: %@";
+
+"Accounts" = "Accounts";
+"Sign Out" = "Abmelden";
+
+"Twitter reported an unknown error." = "Ein unbekannter Fehler ist aufgetreten.";
+"Twitter is over capacity." = "Twitter ist überlastet.";
+
+"Authentication failure." = "Authentifizierung fehlgeschlagen.";
+
+"\"%@\" to %@." = "\"%@\" an %@.";
+
+"Pull down to update..." = "Zum Aktualisieren ziehen...";
+"Release to update..." = "Zum Aktualisieren loslassen...";
+"Updating %@..." = "Aktualisiere %@...";
+"Last updated: %@" = "Letztes Datum: %@";
+"never" = "nie";

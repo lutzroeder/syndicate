@@ -7,12 +7,12 @@
 {
     self = [super init];
 
-    NSString* clientId = @"";
-    NSString* clientSecret = @"";
-
-    _authenticate = [[GoogleReaderAuthController alloc] initWithAccount:self clientId:clientId clientSecret:clientSecret];
-    _synchronize = [[GoogleReaderSync alloc] initWithServiceProvider:serviceProvider account:self clientId:clientId clientSecret:clientSecret];
-
+    _authenticate = nil;
+    _synchronize = nil;
+    _serviceProvider = [serviceProvider retain];
+    _clientId = [@"" retain];
+    _clientSecret = [@"" retain];
+    
     return self;
 }
 
@@ -20,6 +20,9 @@
 {
     [_authenticate release];
     [_synchronize release];
+    [_clientSecret release];
+    [_clientId release];
+    [_serviceProvider release];
     [super dealloc];
 }
 
@@ -30,11 +33,21 @@
 
 - (id <Async>) authenticate
 {
+    if (_authenticate == nil)
+    {
+        _authenticate = [[GoogleReaderAuthController alloc] initWithAccount:self clientId:_clientId clientSecret:_clientSecret];
+    }
+
     return _authenticate;
 }
 
 - (id <Async>) synchronize
 {
+    if (_synchronize == nil)
+    {
+        _synchronize = [[GoogleReaderSync alloc] initWithServiceProvider:_serviceProvider account:self clientId:_clientId clientSecret:_clientSecret];
+    }
+    
     return _synchronize;
 }
 

@@ -3,20 +3,22 @@
 
 @implementation TwitterSync
 
-- (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider account:(Account*)account authenticate:(TwitterAuthController*)authenticate
+- (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider account:(Account*)account
 {
     self = [super init];
     _serviceProvider = [serviceProvider retain];
-    _authenticate = [authenticate retain];
-    _account = account;
+    _accountStore = [[ACAccountStore alloc] init];
+
+    _state = account;
     return self;
 }
 
 - (void) dealloc
 {
     [self resetSync];
-    _account = nil;
-    [_authenticate release];
+    _state = nil;
+	[_account release];
+    [_accountStore release];
     [_serviceProvider release];
     [super dealloc];
 }
@@ -29,6 +31,7 @@
     [self resetSync];
     
     _actions = [[NSMutableArray alloc] init];
+    [_actions addObject:[NSValue valueWithPointer:@selector(findAccount)]];
     [_actions addObject:[NSValue valueWithPointer:@selector(deleteReadItems)]];
     [_actions addObject:[NSValue valueWithPointer:@selector(setupFriendsTimeline)]];
     [_actions addObject:[NSValue valueWithPointer:@selector(setupConnection)]];
@@ -54,11 +57,11 @@
 
 - (void) resetConnection
 {
-    if (_connection != nil)
+    if (_request != nil)
     {
-        [_connection cancel];
-        [_connection release];
-        _connection = nil;
+        // TODO cancel [_request cancel];
+        [_request release];
+        _request = nil;
     }
    
     [_data release];
@@ -119,39 +122,6 @@
     return result;
 }
 
-- (void) connection:(NSURLConnection*)connection didReceiveData:(NSData*)data
-{
-    [_data appendData:data];
-}
-
-- (void) connection:(NSURLConnection*)connection didReceiveResponse:(NSHTTPURLResponse*)response
-{    
-    NSInteger statusCode = [response statusCode];
-    if (statusCode != 200)
-    {
-        [self resetSync];
-        [_delegate asyncDidFailWithError:[WebUtility errorForHttpStatusCode:statusCode]];        
-    }
-}
-
-- (void) connection:(NSURLConnection*)connection didFailWithError:(NSError*)error
-{
-    [self resetSync];
-
-    NSError* underlyingError = [error.userInfo objectForKey:@"NSUnderlyingError"];
-    if (underlyingError != nil)
-    {
-        error = underlyingError;
-    }
-
-    [_delegate asyncDidFailWithError:error];
-}
-
-- (void) connectionDidFinishLoading:(NSURLConnection*)connection
-{
-    [self nextAction];
-}
-
 - (void) nextAction
 {
     if ([_actions count] > 0)
@@ -167,12 +137,38 @@
     }
 }
 
+- (void) findAccount
+{
+	ACAccountType* accountType = [_accountStore accountTypeWithAccountTypeIdentifier:ACAccountTypeIdentifierTwitter];
+    [_accountStore requestAccessToAccountsWithType:accountType options:NULL completion:^(BOOL granted, NSError* error) {
+		
+		if (error)
+		{
+			[_delegate asyncDidFailWithError:error];
+		}
+		else if (granted)
+		{
+			NSArray* accounts = [_accountStore accountsWithAccountType:accountType];
+			for (ACAccount* account in accounts)
+			{
+				if ([account.username isEqualToString:[_state objectForKey:@"username"]])
+				{
+					_account = [account retain];
+					break;
+				}
+			}
+			
+			[self nextAction];
+		}
+    }];
+}
+
 - (void) deleteReadItems
 {
     [_delegate asyncProgressChanged:0.1];
     
     StorageService* storageService = [_serviceProvider serviceWithName:@"StorageService"];
-    [storageService deleteReadItemsForAccount:_account.identifier];
+    [storageService deleteReadItemsForAccount:_state.identifier];
     
     [self nextAction];
 }
@@ -210,7 +206,7 @@
     [_since release];
     [_max release];    
 
-    NSString* status = [_account objectForKey:_key];
+    NSString* status = [_state objectForKey:_key];
     if (status)
     {
         _status = [[NSNumber alloc] initWithLongLong:[status longLongValue]];        
@@ -235,9 +231,9 @@
     
     [self resetConnection];
 
-    _data = [[NSMutableData alloc] init];
+	NSMutableDictionary* params = [NSMutableDictionary dictionary];
 
-    NSMutableString* url = [NSMutableString string];
+	NSMutableString* url = [NSMutableString string];
     [url appendString:_url];
     if ([_since longLongValue] > 0)
     {
@@ -247,17 +243,37 @@
     {
         [url appendFormat:@"&max_id=%@", [[NSNumber numberWithLongLong:([_max longLongValue] - 1)] stringValue]];
     }
-    
-    NSString* token = [_account objectForKey:@"token"];
-    NSString* tokenSecret = [_account objectForKey:@"tokenSecret"];
-    NSURLRequest* request = [_authenticate createRequest:[NSURL URLWithString:url] token:token tokenSecret:tokenSecret];
+	
+	_data = [[NSMutableData alloc] init];
+	
+	_request = [[SLRequest requestForServiceType:SLServiceTypeTwitter requestMethod:SLRequestMethodGET URL:[NSURL URLWithString:url] parameters:params] retain];
+	_request.account = _account;
+	[_request performRequestWithHandler:^(NSData* responseData, NSHTTPURLResponse* urlResponse, NSError* error) {
 
-    _connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+		dispatch_async(dispatch_get_main_queue(), ^{
+			NSInteger statusCode = [urlResponse statusCode];
+			if (statusCode != 200)
+			{
+				[self resetSync];
+				[_delegate asyncDidFailWithError:[WebUtility errorForHttpStatusCode:statusCode]];
+			}
+			else if (error)
+			{
+				NSError* underlyingError = [error.userInfo objectForKey:@"NSUnderlyingError"];
+				[_delegate asyncDidFailWithError:((underlyingError != nil) ? underlyingError : error)];
+			}
+			else
+			{
+				[_data appendData:responseData];
+				[self nextAction];
+			}
+		});
+	}];
 }
 
 - (void) endConnection
 {
-    [_delegate asyncProgressChanged:_progress];
+	[_delegate asyncProgressChanged:_progress];
     _progress += (_progressMax - _progress) / 8.0;
    
     NSString* response = [[NSString alloc] initWithData:_data encoding:NSUTF8StringEncoding];
@@ -293,6 +309,12 @@
                     NSError* error = [NSError errorWithDomain:@"TwitterSync" code:0 userInfo:[NSDictionary dictionaryWithObject:[root objectForKey:@"error"] forKey:NSLocalizedDescriptionKey]];
                     [_delegate asyncDidFailWithError:error];
                 }
+				else if ([root objectForKey:@"errors"] && ([[root objectForKey:@"errors"] count] > 0))
+				{
+					NSDictionary* entry = [[root objectForKey:@"errors"] objectAtIndex:0];
+                    NSError* error = [NSError errorWithDomain:@"TwitterSync" code:0 userInfo:[NSDictionary dictionaryWithObject:[entry objectForKey:@"message"] forKey:NSLocalizedDescriptionKey]];
+                    [_delegate asyncDidFailWithError:error];
+				}
             }
                  
             if ([json isKindOfClass:[NSArray class]])
@@ -321,7 +343,7 @@
                     
                     if ([_key isEqualToString:@"lastSyncMentions"])
                     {
-                        feed = [NSString stringWithFormat:@"@%@", [_account objectForKey:@"screenName"]];
+                        feed = [NSString stringWithFormat:@"@%@", [_state objectForKey:@"username"]];
                         name = feed;
                         image = @"";
                     }
@@ -329,7 +351,7 @@
                     message = [self toHtml:message];
 
                     NSMutableDictionary* target = [[NSMutableDictionary alloc] init];
-                    [target setObject:_account.identifier forKey:@"account"];
+                    [target setObject:_state.identifier forKey:@"account"];
                     [target setObject:feed forKey:@"feed"];
                     [target setObject:name forKey:@"name"];
                     [target setObject:[identifier stringValue] forKey:@"identifier"];
@@ -370,7 +392,7 @@
                 }
                 else
                 {
-                    [_account setObject:_status forKey:_key];
+                    [_state setObject:_status forKey:_key];
 
                     [_status release];
                     _status = nil;

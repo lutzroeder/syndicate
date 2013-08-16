@@ -1,22 +1,25 @@
 
 #import <Foundation/Foundation.h>
+#import <Accounts/Accounts.h>
+#import <Social/Social.h>
 #import "ServiceProvider.h"
 #import "Async.h"
 #import "TwitterAuthController.h"
 #import "WebUtility.h"
 #import "StorageService.h"
 
-@interface TwitterSync : NSObject <NSURLConnectionDelegate, Async>
+@interface TwitterSync : NSObject <Async>
 {
     @private
     id<ServiceProvider> _serviceProvider;
-    TwitterAuthController* _authenticate;
-    Account* _account;
+	ACAccountStore* _accountStore;
+	ACAccount* _account;
+    Account* _state;
     id <AsyncDelegate> _delegate;
 
     NSMutableArray* _actions;
 
-    NSURLConnection* _connection;
+    SLRequest* _request;
     NSMutableData* _data;
 
     NSString* _url;
@@ -29,19 +32,17 @@
     float _progressMax;
 }
 
-- (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider account:(Account*)account authenticate:(TwitterAuthController*)authenticate;
+- (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider account:(Account*)account;
 
 - (void) nextAction;
 
+- (void) findAccount;
 - (void) deleteReadItems;
-
 - (void) setupFriendsTimeline;
 - (void) setupMentions;
-
 - (void) setupConnection;
 - (void) startConnection;
 - (void) endConnection;
-
 - (void) resetConnection;
 - (void) resetSync;
 

@@ -10,6 +10,9 @@
     @private
     GoogleReaderAuthController* _authenticate;
     GoogleReaderSync* _synchronize;
+    id<ServiceProvider> _serviceProvider;
+    NSString* _clientId;
+    NSString* _clientSecret;
 }
 
 - (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider;

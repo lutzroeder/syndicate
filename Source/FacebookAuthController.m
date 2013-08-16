@@ -3,19 +3,29 @@
 
 @implementation FacebookAuthController
 
-- (id) initWithAccount:(Account*)account appId:(NSString*)appId
+- (id) initWithAccount:(Account*)account appId:(NSString *)appId
 {
     self = [super init];
     _account = account;
-    _appId = [appId retain];
+	_appId = [appId retain];
+    _accountStore = [[ACAccountStore alloc] init];
+	_accounts = [[NSMutableArray array] retain];
+    
+    UITableView* tableView = [[[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height) style:UITableViewStyleGrouped] autorelease];
+	tableView.dataSource = self;
+	tableView.delegate = self;
+    self.tableView = tableView;
+	
+	self.navigationItem.title = @"Facebook";
+
     return self;
 }
 
 - (void) dealloc
 {
     [_delegate release];
-    [self resetConnection];
-    [_appId release];
+    [_accountStore release];
+	[_appId release];
     _account = nil;
     [super dealloc];
 }
@@ -25,65 +35,57 @@
     [_delegate release];
     _delegate = [delegate retain];
 
-    [self resetConnection];
-    [self removeCookies];
-    
-    NSMutableString* builder = [NSMutableString string];
-    [builder appendString:@"https://www.facebook.com/dialog/oauth"];
-    [builder appendFormat:@"?client_id=%@", [WebUtility urlEncode:_appId]];
-    [builder appendFormat:@"&redirect_uri=%@", [WebUtility urlEncode:@"http://www.lutzroeder.com"]];
-    [builder appendString:@"&scope=offline_access,read_stream,user_photos,friends_photos"];
-    [builder appendString:@"&response_type=token"];
-    [builder appendString:@"&display=touch"];
-    NSURLRequest* request = [NSURLRequest requestWithURL:[NSURL URLWithString:builder]];
+	[_accounts removeAllObjects];
+	
+	ACAccountType* accountType = [_accountStore accountTypeWithAccountTypeIdentifier:ACAccountTypeIdentifierFacebook];
 
-    UIWebView* webView = (UIWebView*) self.view;
-    [webView loadRequest:request];
+	// @"offline_access",
+	
+	NSDictionary* options = @{
+		ACFacebookAppIdKey:_appId,
+		ACFacebookPermissionsKey:@[ @"read_stream", @"user_photos", @"friends_photos" ] };
+
+	[_accountStore requestAccessToAccountsWithType:accountType options:options completion:^(BOOL granted, NSError* error) {
+		dispatch_async(dispatch_get_main_queue(), ^{
+			if (!granted)
+			{
+				if (error.code == ACErrorAccountNotFound)
+				{
+					SLComposeViewController *composeViewController = [SLComposeViewController composeViewControllerForServiceType:SLServiceTypeFacebook];
+					[self presentViewController:composeViewController animated:NO completion:^{
+						[composeViewController dismissViewControllerAnimated:NO completion:nil];
+					}];
+				}
+				else if (error)
+				{
+					[_delegate asyncDidFailWithError:error];
+				}
+			}
+			else
+			{
+				NSArray* accounts = [_accountStore accountsWithAccountType:accountType];
+				/*if (accounts.count == 1)
+				{
+					[self finish:[accounts objectAtIndex:0]];
+				}
+				else*/
+				{
+					[_accounts addObjectsFromArray:accounts];
+					[self.tableView reloadData];
+				}
+			}
+		});
+	}];
 }
 
 - (void) cancel
 {
-    [_account removeObjectForKey:@"accessToken"];
-    [_account removeObjectForKey:@"expiresIn"];
+	[_account removeObjectForKey:@"username"];
+	[_account removeObjectForKey:@"accessToken"];
 
-    [self resetConnection];
-    _connection = [[NSURLConnection alloc] initWithRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://api.facebook.com/method/auth.expireSession?format=json&sdk=ios&sdk_version=2"]] delegate:self];
-    
-    [self removeCookies];
-
-    [_delegate asyncDidCancel];
-        
+	[_delegate asyncDidCancel];
     [_delegate release];
     _delegate = nil;
-}
-
-- (void) resetConnection
-{
-    if (_connection != nil)
-    {
-        [_connection cancel];
-        [_connection release];
-        _connection = nil;
-    }
-}
-
-- (void) removeCookies
-{
-    NSHTTPCookieStorage* cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
-    for (NSHTTPCookie* cookie in [cookieStorage cookiesForURL:[NSURL URLWithString:@"http://login.facebook.com"]]) 
-    {
-        [cookieStorage deleteCookie:cookie];
-    }
-}
-
-- (void) viewWillAppear:(BOOL)animated
-{
-    [super viewWillAppear:animated];
-    
-    UIWebView* webView = [[[UIWebView alloc] init] autorelease];
-    webView.delegate = self;
-    webView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.view = webView;
 }
 
 - (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
@@ -91,89 +93,50 @@
     return [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad;
 }
 
-- (void) webViewDidStartLoad:(UIWebView*)webView
+- (void) finish:(ACAccount*)account
 {
-    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
+	[_account setObject:account.username forKey:@"username"];
+	[_account setObject:account.credential.oauthToken forKey:@"accessToken"];
+	[_delegate asyncDidFinish];
 }
 
-- (void) webView:(UIWebView*)webView didFailLoadWithError:(NSError*)error
+- (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView
 {
-    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
+    return 1;
 }
 
-- (void) webViewDidFinishLoad:(UIWebView*)webView
+- (NSInteger) tableView:(UITableView*)tableView numberOfRowsInSection:(NSInteger)section
 {
-    [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
+	return [_accounts count];
 }
 
-- (BOOL) webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType
+- (UITableViewCell*) tableView:(UITableView*)tableView cellForRowAtIndexPath:(NSIndexPath*)indexPath
 {
-    NSURL* url = request.URL;
-    
-    if ([url.scheme isEqualToString:@"http"] && [url.host isEqualToString:@"www.lutzroeder.com"]) 
+    if (indexPath.section == 0)
     {
-        NSDictionary* params = [WebUtility parseUrlParameters:url.absoluteString afterSeparator:@"#"];
-
-        NSString* error = [params objectForKey:@"error"];
-        NSString* errorReason = [params objectForKey:@"error_reason"];
-        if ([@"access_denied" isEqualToString:error] && [@"user_denied" isEqualToString:errorReason])
+        UITableViewCell* cell = [tableView dequeueReusableCellWithIdentifier:@"TwitterAccount"];
+        if (cell == nil)
         {
-            [_delegate asyncDidCancel];            
-        }
-        else
-        {
-            NSString* errorCode = [params objectForKey:@"error_code"];
-            NSString* errorMessage = [params objectForKey:@"error_msg"];
-            if (errorCode)
-            {
-                NSDictionary* userInfo = [NSDictionary dictionaryWithObject:errorMessage forKey:NSLocalizedDescriptionKey];
-                NSError* error = [NSError errorWithDomain:@"facebookErrDomain" code:[errorCode intValue] userInfo:userInfo];
-                [_delegate asyncDidFailWithError:error];
-            } 
-        
-            NSString* accessToken = [params objectForKey:@"access_token"];
-            NSString* expiresIn = [params objectForKey:@"expires_in"];
-            if (![NSString isNullOrEmpty:accessToken] && ![NSString isNullOrEmpty:expiresIn])
-            {
-                [_account setObject:[NSString stringWithFormat:@"%@:%@", NSStringFromClass(_account.class), accessToken] forKey:@"identifier"];
-                [_account setObject:accessToken forKey:@"accessToken"];
-                [_account setObject:expiresIn forKey:@"expiresIn"];
-                [_delegate asyncDidFinish];
-            }
-            
-            [_delegate asyncDidCancel];
+            cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"TwitterAccount"] autorelease];
         }
 
-        return NO;
-    } 
-    else if (navigationType == UIWebViewNavigationTypeLinkClicked) 
-    {
-        WebViewController* webViewController = [[WebViewController alloc] initWithRequest:[NSURLRequest requestWithURL:url]];
-        [self.navigationController pushViewController:webViewController animated:YES];
-        [webViewController release];
-        return NO;
+		ACAccount* account = [_accounts objectAtIndex:indexPath.row];
+		
+		cell.textLabel.text = account.username;
+		
+		return cell;
     }
-
-    return YES;
+	
+    return nil;
 }
 
-
-- (void) connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse*)response
+- (void)tableView:(UITableView*)tableView didSelectRowAtIndexPath:(NSIndexPath*)indexPath
 {
-}
-
-- (void) connection:(NSURLConnection*)connection didReceiveData:(NSData*)data 
-{
-}
-
-- (void) connection:(NSURLConnection*)connection didFailWithError:(NSError*)error 
-{
-    [self resetConnection];
-}
-
-- (void) connectionDidFinishLoading:(NSURLConnection*)connection 
-{
-    [self resetConnection];
+	if (indexPath.section == 0)
+	{
+		ACAccount* account = [_accounts objectAtIndex:indexPath.row];
+		[self finish:account];
+	}
 }
 
 @end

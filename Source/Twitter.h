@@ -10,6 +10,7 @@
     @private
     TwitterSync* _synchronize;
     TwitterAuthController* _authenticate;
+    id<ServiceProvider> _serviceProvider;
 }
 
 - (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider;

@@ -52,14 +52,10 @@
         case UIUserInterfaceIdiomPad:
         {
             DetailViewController* detailViewController = [[[DetailViewController alloc] init] autorelease];
-            detailViewController.navigationBar.barStyle = UIBarStyleBlack;
-            [detailViewController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavigationBar.png"] forBarMetrics:UIBarMetricsDefault];
 
             FeedsController* feedsController = [[[FeedsController alloc] initWithServiceProvider:self detailViewController:detailViewController] autorelease];
             feedsController.navigationItem.leftBarButtonItem = settingsButton;
             UINavigationController* masterViewController = [[[UINavigationController alloc] initWithRootViewController:feedsController] autorelease];
-            masterViewController.navigationBar.barStyle = UIBarStyleBlack;
-            [masterViewController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavigationBar.png"] forBarMetrics:UIBarMetricsDefault];
 
             UISplitViewController* splitViewController = [[[UISplitViewController alloc] init] autorelease];
             splitViewController.viewControllers = [NSArray arrayWithObjects:masterViewController, detailViewController, nil];
@@ -75,16 +71,13 @@
             feedsController.navigationItem.leftBarButtonItem = settingsButton;
 
             OrientationController* orientationController = [[[OrientationController alloc] initWithRootViewController:feedsController] autorelease];
-            orientationController.navigationBar.barStyle = UIBarStyleBlack;
-            [orientationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavigationBar.png"] forBarMetrics:UIBarMetricsDefault];
             rootViewController = orientationController;
         }
         break;
     }
-    
-    [self setStatusBarHidden:NO withAnimation:YES];
-    [self setStatusBarStyle:UIStatusBarStyleBlackOpaque];
 
+    [self setStatusBarHidden:NO withAnimation:YES];
+    
     _window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     _window.rootViewController = rootViewController;
     [_window makeKeyAndVisible];
@@ -139,11 +132,9 @@
 
     UINavigationController* navigationController = [[UINavigationController alloc] initWithRootViewController:accountsController];
     [navigationController setModalPresentationStyle:UIModalPresentationFormSheet];
-    [navigationController.navigationBar setBarStyle:UIBarStyleBlack];
-    [navigationController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavigationBar.png"] forBarMetrics:UIBarMetricsDefault];
 
     [_window.rootViewController presentViewController:navigationController animated:YES completion:nil];
-    
+
     [navigationController release];    
     [accountsController release];
 }

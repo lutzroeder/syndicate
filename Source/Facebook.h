@@ -10,6 +10,8 @@
     @private
     FacebookAuthController* _authenticate;
     FacebookSync* _synchronize;
+    id<ServiceProvider> _serviceProvider;
+    NSString* _appId;
 }
 
 - (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider;

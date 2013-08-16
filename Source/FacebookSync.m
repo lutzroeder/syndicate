@@ -92,7 +92,7 @@
     _data = [[NSMutableData alloc] init];
 
     NSString* accessToken = [_account objectForKey:@"accessToken"];
-    
+
     NSMutableString* builder = [NSMutableString string];
     [builder appendString:@"https://graph.facebook.com/me/home"];
     [builder appendString:@"?sdk=ios"];

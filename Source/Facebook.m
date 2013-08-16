@@ -6,9 +6,10 @@
 - (id) initWithServiceProvider:(id<ServiceProvider>)serviceProvider
 {
     self = [super init];
-    NSString* appId = @"";
-    _authenticate = [[FacebookAuthController alloc] initWithAccount:self appId:appId];
-    _synchronize = [[FacebookSync alloc] initWithServiceProvider:serviceProvider account:self];
+    _authenticate = nil;
+    _synchronize = nil;
+	_appId = [@"" retain];
+    _serviceProvider = [serviceProvider retain];
     return self;
 }
 
@@ -16,6 +17,7 @@
 {
     [_synchronize release];
     [_authenticate release];
+    [_serviceProvider release];
     [super dealloc];
 }
 
@@ -26,11 +28,19 @@
 
 - (id <Async>) authenticate
 {
+    if (_authenticate == nil)
+    {
+        _authenticate = [[FacebookAuthController alloc] initWithAccount:self appId:_appId];
+    }
     return _authenticate;
 }
 
 - (id <Async>) synchronize
 {
+    if (_synchronize == nil)
+    {
+        _synchronize = [[FacebookSync alloc] initWithServiceProvider:_serviceProvider account:self];
+    }
     return _synchronize;
 }
 

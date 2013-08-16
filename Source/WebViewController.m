@@ -39,8 +39,6 @@
 
         _actionToolbar = [[UIToolbar alloc] init];
         _actionToolbar.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
-        _actionToolbar.barStyle = UIBarStyleBlack;
-        [_actionToolbar setBackgroundImage:[UIImage imageNamed:@"NavigationBar.png"] forToolbarPosition:UIToolbarPositionAny barMetrics:UIBarMetricsDefault];
         _actionToolbar.items = [NSArray arrayWithObjects:fixedSpace15pxButton, _backButton, fixedSpace40pxButton, _forwardButton, flexibleSpaceButton, _activityIndicatorButton, flexibleSpaceButton, _refreshButton, fixedSpace40pxButton, _actionButton, fixedSpace15pxButton, nil];
         [self.view addSubview:_actionToolbar];
     }
@@ -253,7 +251,6 @@
     MFMailComposeViewController* mailComposeViewController = [[[MFMailComposeViewController alloc] init] autorelease];
     mailComposeViewController.mailComposeDelegate = self;
     mailComposeViewController.navigationBar.barStyle = UIBarStyleBlack;
-    [mailComposeViewController.navigationBar setBackgroundImage:[UIImage imageNamed:@"NavigationBar.png"] forBarMetrics:UIBarMetricsDefault];
     [mailComposeViewController setSubject:[NSString stringWithFormat:NSLocalizedString(@"Fwd: %@", nil), self.navigationItem.title]];
     [mailComposeViewController setMessageBody:url.absoluteString isHTML:YES];
     [self.navigationController presentViewController:mailComposeViewController animated:YES completion:nil];

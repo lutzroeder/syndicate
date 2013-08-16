@@ -9,6 +9,13 @@
     _account = account;
     _clientId = [clientId retain];
     _clientSecret = [clientSecret retain];    
+
+    UIWebView* webView = [[UIWebView alloc] init];
+    [webView setDelegate:self];
+    [webView setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
+    self.view = webView;
+    [webView release];
+
     return self;
 }
 
@@ -95,17 +102,6 @@
     {
         [cookieStorage deleteCookie:cookie];
     }
-}
-
-- (void) viewWillAppear:(BOOL)animated
-{
-    [super viewWillAppear:animated];
-
-    UIWebView* webView = [[UIWebView alloc] init];
-    [webView setDelegate:self];
-    [webView setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
-    self.view = webView;
-    [webView release];
 }
 
 - (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation

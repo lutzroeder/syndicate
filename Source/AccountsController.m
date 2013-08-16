@@ -16,7 +16,6 @@
     UITableView* tableView = [[[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height) style:UITableViewStyleGrouped] autorelease];
     tableView.dataSource = self;
     tableView.delegate = self;
-    tableView.backgroundView = [[[UIImageView alloc] initWithImage:[UIImage imageNamed:@"Background.png"]] autorelease];
     self.tableView = tableView;
     
     return self;
@@ -170,7 +169,8 @@
             _newAccount = [[NSClassFromString(accountType) alloc] initWithServiceProvider:_serviceProvider];            
             UIViewController* viewController = (UIViewController*) _newAccount.authenticate;            
             [self.navigationController pushViewController:viewController animated:YES];
-            [_newAccount.authenticate start:self];
+			
+			[_newAccount.authenticate start:self];
         }
     }	    
 }

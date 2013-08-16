@@ -126,17 +126,17 @@
     
     NSNumber* unread = [feed objectForKey:@"unread"];
     BOOL empty = (unread.intValue == 0);
-    
-    cell.counterTextLabel.text = empty ? @"" : unread.stringValue;
-    cell.counterTextLabel.hidden = empty;
+
     cell.textLabel.textColor = empty ? [UIColor grayColor] : [UIColor blackColor];
-    cell.imageView.layer.cornerRadius = 4.0;
+    cell.detailTextLabel.text = empty ? @"" : unread.stringValue;
+
+	cell.imageView.layer.cornerRadius = 2;
     cell.imageView.layer.masksToBounds = YES;
     cell.imageView.layer.borderColor = [UIColor colorWithWhite:0.3 alpha:0.1].CGColor;
     cell.imageView.layer.borderWidth = 1;    
     cell.imageView.image = empty ? account.grayscaleImage : account.image;
     cell.imageView.alpha = empty ? 0.5 : 1;
-    
+
     NSString* image = [feed objectForKey:@"image"];
     if (![NSString isNullOrEmpty:image])
     {
@@ -204,7 +204,7 @@
 {
     NSDictionary* feed = [_feeds objectAtIndex:indexPath.row];
 
-    FeedCell* cell = [[[FeedCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Feed"] autorelease];
+    FeedCell* cell = [[[FeedCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"Feed"] autorelease];
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;    
     cell.textLabel.text = [feed objectForKey:@"name"];
     [self updateFeedCell:cell withFeed:feed];

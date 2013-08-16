@@ -131,7 +131,11 @@
                 lineBreakMode = NSLineBreakByTruncatingTail;
             }
 
-            [text drawInRect:rect withFont:font lineBreakMode:lineBreakMode];
+            NSMutableParagraphStyle* paragraphStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
+            paragraphStyle.lineBreakMode = lineBreakMode;
+            NSDictionary* attributes = [NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, paragraphStyle, NSParagraphStyleAttributeName, nil];
+            [text drawInRect:rect withAttributes:attributes];
+            // [text drawInRect:rect withFont:font lineBreakMode:lineBreakMode];
         }
         else if ([@"image" isEqualToString:type])
         {
@@ -178,14 +182,24 @@
                 UILineBreakMode lineBreakMode = NSLineBreakByWordWrapping;
                 if ([element objectForKey:@"maxLines"])
                 {
-                    float fontHeight = [@"X" sizeWithFont:font].height;
+                    NSDictionary* attributes = [NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, nil];
+                    float fontHeight = [@"X" sizeWithAttributes:attributes].height;
                     NSInteger maxLines = [[element objectForKey:@"maxLines"] integerValue];
                     constraintHeight = fontHeight * maxLines;
                     lineBreakMode = NSLineBreakByTruncatingTail;
                 }
 
+                NSMutableParagraphStyle* paragraphStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
+                [paragraphStyle setLineBreakMode:lineBreakMode];
+
+                NSDictionary* attributes = [NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, paragraphStyle, NSParagraphStyleAttributeName, nil];
+
+//                CGSize size = [text sizeWithAttributes:attributes];
+                
                 CGSize size = [text sizeWithFont:font constrainedToSize:CGSizeMake(_width - 1, constraintHeight) lineBreakMode:lineBreakMode];
 
+     //           CGRect size2 = [text boundingRectWithSize:CGSizeMake(_width - 1, constraintHeight) options:NSStringDrawingUsesDeviceMetrics attributes:attributes context:nil];
+                
                 [element setObject:[NSNumber numberWithFloat:x + 1] forKey:@"x"];
                 [element setObject:[NSNumber numberWithFloat:y] forKey:@"y"];
                 [element setObject:[NSNumber numberWithFloat:size.width] forKey:@"width"];
